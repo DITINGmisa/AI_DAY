@@ -39,7 +39,7 @@ class VideoReader(object):
             pass
 
     def __iter__(self):
-        self.cap = cv2.VideoCapture(self.file_name)
+        self.cap = cv2.VideoCapture(self.file_name, cv2.CAP_DSHOW)
         if not self.cap.isOpened():
             raise IOError('Video {} cannot be opened'.format(self.file_name))
         return self
@@ -83,7 +83,7 @@ def run_demo(net, image_provider, height_size, cpu, track, smooth, demoimage, _m
     net = net.eval()
     if not cpu:
         net = net.cuda()
-
+    cv2.namedWindow('Lightweight Human Pose Estimation Python Demo', cv2.WINDOW_NORMAL)
     stride = 8
     upsample_ratio = 4
     num_keypoints = Pose.num_kpts
@@ -120,36 +120,43 @@ def run_demo(net, image_provider, height_size, cpu, track, smooth, demoimage, _m
         #     track_poses(previous_poses, current_poses, smooth=smooth)
         #     previous_poses = current_poses
         if not current_poses:
-            print("[ERROR]:没有检测到人像！")
-            continue
-        pose = current_poses[-1]
-        if not demoimage:
-            a, b = get_similarity(poseList[_mode], pose)  # pose1:previous_poses[-1]
-        pose.draw(img)  # 获取相似度后才知道要不要画对号
-        cv2.rectangle(img, (pose.bbox[0], int(pose.bbox[1] - 0.5 / 9 * pose.bbox[3])),  # 假设九头身，向上延伸半张脸
-                      (pose.bbox[0] + pose.bbox[2], pose.bbox[1] + pose.bbox[3]), (0, 255, 0))
-        # img = cv2.addWeighted(orig_img, 0.4, img, 0.4, 0)
-        if demoimage:
-            cv2.imwrite(("./result"+str(_mode)+".jpg"),img)
-            return pose, img
-        # if track:
-        #     cv2.putText(img, 'id: {}'.format(pose.id), (pose.bbox[0], pose.bbox[1] - 16),
-        #                 cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255))
-        resized_image = cv2.resize(img, dsize=(1920, 1080))
-        resized_image_t = cv2.resize(imgList[_mode], dsize=(480, 360))
-        resized_image[0:360, 1440:1920] = resized_image_t
-        TruePoint = 0
-        for kpt_id in range(len(poseList[_mode].keypoints)):
-            if poseList[_mode].keypoints[kpt_id, 0] != -1:
-                TruePoint = TruePoint + 1
-        cv2.putText(resized_image, 'similarity:{:.2f}%, {}/{}'.format(a, b, TruePoint), (0, 45), cv2.FONT_HERSHEY_DUPLEX, 2,
-                    (0, 0, 255), 2)
-        if b == TruePoint or a >= 80:
-            cv2.putText(resized_image, 'Succeeded!', (800, 580), cv2.FONT_HERSHEY_DUPLEX, 2, (0, 0, 255), 2)
-            delay = 0
-        cv2.namedWindow('Lightweight Human Pose Estimation Python Demo', cv2.WINDOW_NORMAL)
-        cv2.setWindowProperty('Lightweight Human Pose Estimation Python Demo', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-        cv2.imshow('Lightweight Human Pose Estimation Python Demo', resized_image)
+            print("[WARNING]:没有检测到人像！")
+            resized_image = cv2.resize(img, dsize=(1920, 1080))
+            resized_image_t = cv2.resize(imgList[_mode], dsize=(480, 360))
+            resized_image[0:360, 1440:1920] = resized_image_t
+            cv2.setWindowProperty('Lightweight Human Pose Estimation Python Demo', cv2.WND_PROP_FULLSCREEN,
+                                  cv2.WINDOW_FULLSCREEN)
+            cv2.imshow('Lightweight Human Pose Estimation Python Demo', resized_image)
+        else:
+            pose = current_poses[-1]
+            if not demoimage:
+                a, b = get_similarity(poseList[_mode], pose)  # pose1:previous_poses[-1]
+                if _mode == 2: #调整游戏平衡性
+                    a *= 1.2
+            pose.draw(img)  # 获取相似度后才知道要不要画对号
+            cv2.rectangle(img, (pose.bbox[0], int(pose.bbox[1] - 0.5 / 9 * pose.bbox[3])),  # 假设九头身，向上延伸半张脸
+                          (pose.bbox[0] + pose.bbox[2], pose.bbox[1] + pose.bbox[3]), (0, 255, 0))
+            # img = cv2.addWeighted(orig_img, 0.4, img, 0.4, 0)
+            if demoimage:
+                cv2.imwrite(("./result"+str(_mode)+".jpg"),img)
+                return pose, img
+            # if track:
+            #     cv2.putText(img, 'id: {}'.format(pose.id), (pose.bbox[0], pose.bbox[1] - 16),
+            #                 cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255))
+            resized_image = cv2.resize(img, dsize=(1920, 1080))
+            resized_image_t = cv2.resize(imgList[_mode], dsize=(480, 360))
+            resized_image[0:360, 1440:1920] = resized_image_t
+            TruePoint = 0
+            for kpt_id in range(len(poseList[_mode].keypoints)):
+                if poseList[_mode].keypoints[kpt_id, 0] != -1:
+                    TruePoint = TruePoint + 1
+            cv2.putText(resized_image, 'similarity:{:.2f}%, {}/{}'.format(a, b, TruePoint), (0, 45), cv2.FONT_HERSHEY_DUPLEX, 2,
+                        (0, 0, 255), 2)
+            if b == TruePoint or a >= 80:
+                cv2.putText(resized_image, 'Succeeded!', (800, 580), cv2.FONT_HERSHEY_DUPLEX, 2, (0, 0, 255), 2)
+                delay = 0
+            cv2.setWindowProperty('Lightweight Human Pose Estimation Python Demo', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            cv2.imshow('Lightweight Human Pose Estimation Python Demo', resized_image)
         key = cv2.waitKey(delay)
         if key == 27:  # esc
             return

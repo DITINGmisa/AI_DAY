@@ -73,7 +73,7 @@ class Pose:
                 cv2.line(img, (int(x_a), int(y_a)), (int(x_b), int(y_b)), Pose.colors[part_id], 2)
 
 
-def get_similarity(a, b, threshold=0.72):
+def get_similarity(a, b, threshold=0.75):
     num_similar_kpt = 0
     mean_similarity = 0
     for kpt_id in range(Pose.num_kpts):
